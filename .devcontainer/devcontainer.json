@@ -1,8 +1,5 @@
 {
   "name": "Home Assistant Dev",
-  "mounts": [
-    "source=/run/user/1000/podman/podman.sock,target=/var/run/docker.sock,type=bind"
-  ],
   "context": "..",
   "dockerFile": "../Dockerfile.dev",
   "postCreateCommand": "git config --global --add safe.directory ${containerWorkspaceFolder} && script/setup",
