@@ -5,7 +5,7 @@ from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
 from aiohomeconnect.const import OAUTH2_TOKEN
-from aiohomeconnect.model import SettingKey, StatusKey
+from aiohomeconnect.model import HomeAppliance, SettingKey, StatusKey
 from aiohomeconnect.model.error import (
     HomeConnectError,
     TooManyRequestsError,
@@ -41,43 +41,28 @@ from tests.test_util.aiohttp import AiohttpClientMocker
 
 async def test_entry_setup(
     hass: HomeAssistant,
+    client: MagicMock,
     config_entry: MockConfigEntry,
     integration_setup: Callable[[MagicMock], Awaitable[bool]],
-    setup_credentials: None,
-    client: MagicMock,
 ) -> None:
     """Test setup and unload."""
-    assert config_entry.state == ConfigEntryState.NOT_LOADED
     assert await integration_setup(client)
-    assert config_entry.state == ConfigEntryState.LOADED
+    assert config_entry.state is ConfigEntryState.LOADED
 
     assert await hass.config_entries.async_unload(config_entry.entry_id)
     await hass.async_block_till_done()
 
-    assert config_entry.state == ConfigEntryState.NOT_LOADED
-
-
-async def test_exception_handling(
-    integration_setup: Callable[[MagicMock], Awaitable[bool]],
-    config_entry: MockConfigEntry,
-    setup_credentials: None,
-    client_with_exception: MagicMock,
-) -> None:
-    """Test exception handling."""
-    assert config_entry.state == ConfigEntryState.NOT_LOADED
-    assert await integration_setup(client_with_exception)
-    assert config_entry.state == ConfigEntryState.LOADED
+    assert config_entry.state is ConfigEntryState.NOT_LOADED
 
 
 @pytest.mark.parametrize("token_expiration_time", [12345])
 async def test_token_refresh_success(
     hass: HomeAssistant,
-    platforms: list[Platform],
+    aioclient_mock: AiohttpClientMocker,
+    client: MagicMock,
     integration_setup: Callable[[MagicMock], Awaitable[bool]],
     config_entry: MockConfigEntry,
-    aioclient_mock: AiohttpClientMocker,
-    setup_credentials: None,
-    client: MagicMock,
+    platforms: list[Platform],
 ) -> None:
     """Test where token is expired and the refresh attempt succeeds."""
 
@@ -100,7 +85,7 @@ async def test_token_refresh_success(
         client._auth = auth
         return client
 
-    assert config_entry.state == ConfigEntryState.NOT_LOADED
+    assert config_entry.state is ConfigEntryState.NOT_LOADED
     with (
         patch("homeassistant.components.home_connect.PLATFORMS", platforms),
         patch("homeassistant.components.home_connect.HomeConnectClient") as client_mock,
@@ -108,7 +93,7 @@ async def test_token_refresh_success(
         client_mock.side_effect = MagicMock(side_effect=init_side_effect)
         assert await hass.config_entries.async_setup(config_entry.entry_id)
         await hass.async_block_till_done()
-    assert config_entry.state == ConfigEntryState.LOADED
+    assert config_entry.state is ConfigEntryState.LOADED
 
     # Verify token request
     assert aioclient_mock.call_count == 1
@@ -152,15 +137,13 @@ async def test_token_refresh_success(
     ],
 )
 async def test_token_refresh_error(
+    hass: HomeAssistant,
+    aioclient_mock: AiohttpClientMocker,
+    client: MagicMock,
+    config_entry: MockConfigEntry,
+    integration_setup: Callable[[MagicMock], Awaitable[bool]],
     aioclient_mock_args: dict[str, Any],
     expected_config_entry_state: ConfigEntryState,
-    hass: HomeAssistant,
-    platforms: list[Platform],
-    integration_setup: Callable[[MagicMock], Awaitable[bool]],
-    config_entry: MockConfigEntry,
-    aioclient_mock: AiohttpClientMocker,
-    setup_credentials: None,
-    client: MagicMock,
 ) -> None:
     """Test where token is expired and the refresh attempt fails."""
 
@@ -171,7 +154,7 @@ async def test_token_refresh_error(
         **aioclient_mock_args,
     )
 
-    assert config_entry.state == ConfigEntryState.NOT_LOADED
+    assert config_entry.state is ConfigEntryState.NOT_LOADED
     with patch(
         "homeassistant.components.home_connect.HomeConnectClient", return_value=client
     ):
@@ -189,17 +172,15 @@ async def test_token_refresh_error(
     ],
 )
 async def test_client_error(
-    exception: HomeConnectError,
-    expected_state: ConfigEntryState,
+    client_with_exception: MagicMock,
     config_entry: MockConfigEntry,
     integration_setup: Callable[[MagicMock], Awaitable[bool]],
-    setup_credentials: None,
-    client_with_exception: MagicMock,
+    exception: HomeConnectError,
+    expected_state: ConfigEntryState,
 ) -> None:
     """Test client errors during setup integration."""
     client_with_exception.get_home_appliances.return_value = None
     client_with_exception.get_home_appliances.side_effect = exception
-    assert config_entry.state == ConfigEntryState.NOT_LOADED
     assert not await integration_setup(client_with_exception)
     assert config_entry.state == expected_state
     assert client_with_exception.get_home_appliances.call_count == 1
@@ -216,12 +197,10 @@ async def test_client_error(
     ],
 )
 async def test_client_rate_limit_error(
-    raising_exception_method: str,
-    hass: HomeAssistant,
+    client: MagicMock,
     config_entry: MockConfigEntry,
     integration_setup: Callable[[MagicMock], Awaitable[bool]],
-    setup_credentials: None,
-    client: MagicMock,
+    raising_exception_method: str,
 ) -> None:
     """Test client errors during setup integration."""
     retry_after = 42
@@ -237,34 +216,33 @@ async def test_client_rate_limit_error(
     mock.side_effect = side_effect
     setattr(client, raising_exception_method, mock)
 
-    assert config_entry.state == ConfigEntryState.NOT_LOADED
+    assert config_entry.state is ConfigEntryState.NOT_LOADED
     with patch(
         "homeassistant.components.home_connect.coordinator.asyncio_sleep",
     ) as asyncio_sleep_mock:
         assert await integration_setup(client)
-    assert config_entry.state == ConfigEntryState.LOADED
+    assert config_entry.state is ConfigEntryState.LOADED
     assert mock.call_count >= 2
     asyncio_sleep_mock.assert_called_once_with(retry_after)
 
 
+@pytest.mark.parametrize("appliance", ["Washer"], indirect=True)
 async def test_required_program_or_at_least_an_option(
     hass: HomeAssistant,
     device_registry: dr.DeviceRegistry,
+    client: MagicMock,
     config_entry: MockConfigEntry,
     integration_setup: Callable[[MagicMock], Awaitable[bool]],
-    setup_credentials: None,
-    client: MagicMock,
-    appliance_ha_id: str,
+    appliance: HomeAppliance,
 ) -> None:
     "Test that the set_program_and_options does raise an exception if no program nor options are set."
 
-    assert config_entry.state == ConfigEntryState.NOT_LOADED
     assert await integration_setup(client)
-    assert config_entry.state == ConfigEntryState.LOADED
+    assert config_entry.state is ConfigEntryState.LOADED
 
     device_entry = device_registry.async_get_or_create(
         config_entry_id=config_entry.entry_id,
-        identifiers={(DOMAIN, appliance_ha_id)},
+        identifiers={(DOMAIN, appliance.ha_id)},
     )
 
     with pytest.raises(
@@ -281,13 +259,14 @@ async def test_required_program_or_at_least_an_option(
         )
 
 
+@pytest.mark.parametrize("appliance", ["Washer"], indirect=True)
 async def test_entity_migration(
     hass: HomeAssistant,
     device_registry: dr.DeviceRegistry,
     entity_registry: er.EntityRegistry,
     config_entry_v1_1: MockConfigEntry,
-    appliance_ha_id: str,
     platforms: list[Platform],
+    appliance: HomeAppliance,
 ) -> None:
     """Test entity migration."""
 
@@ -295,7 +274,7 @@ async def test_entity_migration(
 
     device_entry = device_registry.async_get_or_create(
         config_entry_id=config_entry_v1_1.entry_id,
-        identifiers={(DOMAIN, appliance_ha_id)},
+        identifiers={(DOMAIN, appliance.ha_id)},
     )
 
     test_entities = [
@@ -335,7 +314,7 @@ async def test_entity_migration(
         entity_registry.async_get_or_create(
             domain,
             DOMAIN,
-            f"{appliance_ha_id}-{old_unique_id_suffix}",
+            f"{appliance.ha_id}-{old_unique_id_suffix}",
             device_id=device_entry.id,
             config_entry=config_entry_v1_1,
         )
@@ -346,7 +325,7 @@ async def test_entity_migration(
 
     for domain, _, expected_unique_id_suffix in test_entities:
         assert entity_registry.async_get_entity_id(
-            domain, DOMAIN, f"{appliance_ha_id}-{expected_unique_id_suffix}"
+            domain, DOMAIN, f"{appliance.ha_id}-{expected_unique_id_suffix}"
         )
     assert config_entry_v1_1.minor_version == 2
 
@@ -356,3 +335,20 @@ async def test_bsh_key_transformations() -> None:
     program = "Dishcare.Dishwasher.Program.Eco50"
     translation_key = bsh_key_to_translation_key(program)
     assert RE_TRANSLATION_KEY.match(translation_key)
+
+
+async def test_config_entry_unique_id_migration(
+    hass: HomeAssistant,
+    config_entry_v1_2: MockConfigEntry,
+) -> None:
+    """Test that old config entries use the unique id obtained from the JWT subject."""
+    config_entry_v1_2.add_to_hass(hass)
+
+    assert config_entry_v1_2.unique_id != "1234567890"
+    assert config_entry_v1_2.minor_version == 2
+
+    await hass.config_entries.async_setup(config_entry_v1_2.entry_id)
+    await hass.async_block_till_done()
+
+    assert config_entry_v1_2.unique_id == "1234567890"
+    assert config_entry_v1_2.minor_version == 3

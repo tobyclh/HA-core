@@ -102,6 +102,24 @@ SENSOR_DESCRIPTIONS = [
         protocol_listener=RoborockDataProtocol.FILTER_WORK_TIME,
     ),
     RoborockSensorDescription(
+        native_unit_of_measurement=UnitOfTime.HOURS,
+        key="cleaning_brush_time_left",
+        device_class=SensorDeviceClass.DURATION,
+        translation_key="cleaning_brush_time_left",
+        value_fn=lambda data: data.consumable.cleaning_brush_time_left,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        is_dock_entity=True,
+    ),
+    RoborockSensorDescription(
+        native_unit_of_measurement=UnitOfTime.HOURS,
+        key="strainer_time_left",
+        device_class=SensorDeviceClass.DURATION,
+        translation_key="strainer_time_left",
+        value_fn=lambda data: data.consumable.strainer_time_left,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        is_dock_entity=True,
+    ),
+    RoborockSensorDescription(
         native_unit_of_measurement=UnitOfTime.SECONDS,
         key="sensor_time_left",
         device_class=SensorDeviceClass.DURATION,
@@ -381,7 +399,10 @@ class RoborockCurrentRoom(RoborockCoordinatedEntityV1, SensorEntity):
     @property
     def options(self) -> list[str]:
         """Return the currently valid rooms."""
-        if self.coordinator.current_map is not None:
+        if (
+            self.coordinator.current_map is not None
+            and self.coordinator.current_map in self.coordinator.maps
+        ):
             return list(
                 self.coordinator.maps[self.coordinator.current_map].rooms.values()
             )
@@ -390,7 +411,10 @@ class RoborockCurrentRoom(RoborockCoordinatedEntityV1, SensorEntity):
     @property
     def native_value(self) -> str | None:
         """Return the value reported by the sensor."""
-        if self.coordinator.current_map is not None:
+        if (
+            self.coordinator.current_map is not None
+            and self.coordinator.current_map in self.coordinator.maps
+        ):
             return self.coordinator.maps[self.coordinator.current_map].current_room
         return None
 
