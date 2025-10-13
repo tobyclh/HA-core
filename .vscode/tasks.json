@@ -25,6 +25,17 @@
       "problemMatcher": []
     },
     {
+      "label": "[Zukun] Copy Component to config",
+      "type": "shell",
+      "command": "rm -rf ./config/custom_components/zukun && cp -r zukun ./config/custom_components",
+      "group": "test",
+      "presentation": {
+        "reveal": "always",
+        "panel": "new"
+      },
+      "problemMatcher": []
+    },
+    {
       "label": "Pytest",
       "type": "shell",
       "command": "${command:python.interpreterPath} -m pytest --timeout=10 tests",

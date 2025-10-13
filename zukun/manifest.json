@@ -1,0 +1,12 @@
+{
+  "domain": "zukun",
+  "name": "Zukun Camera",
+  "codeowners": ["@davet2001"],
+  "config_flow": true,
+  "dependencies": ["http", "stream"],
+  "documentation": "https://www.home-assistant.io/integrations/zukun",
+  "integration_type": "device",
+  "iot_class": "local_push",
+  "requirements": ["av==13.1.0", "Pillow==11.3.0"],
+  "version": "0.0.1"
+}
