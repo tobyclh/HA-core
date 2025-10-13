@@ -29,7 +29,7 @@ def get_battery():
     """Return simulated battery status."""
     battery = psutil.sensors_battery()
     if battery is None:
-        return jsonify({"battery_percent": 100.0})
+        return jsonify({"battery_percent": 0.0, 'charging': False})
     return jsonify({"battery_percent": battery.percent, "charging": battery.power_plugged})
 
 @app.route("/storage", methods=["GET"])
