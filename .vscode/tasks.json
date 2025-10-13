@@ -11,7 +11,10 @@
         "panel": "new"
       },
       "problemMatcher": [],
-      "dependsOn": ["Compile English translations"]
+      "dependsOn": [
+        "[Zukun] Copy Component to config",
+        "Compile English translations"
+      ]
     },
     {
       "label": "[Zukun] Run Test Camera REST API",
@@ -28,10 +31,9 @@
       "label": "[Zukun] Copy Component to config",
       "type": "shell",
       "command": "rm -rf ./config/custom_components/zukun && cp -r zukun ./config/custom_components",
-      "group": "test",
-      "presentation": {
-        "reveal": "always",
-        "panel": "new"
+      "group": {
+        "kind": "build",
+        "isDefault": true
       },
       "problemMatcher": []
     },
