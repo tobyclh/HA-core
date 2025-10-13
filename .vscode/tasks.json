@@ -14,6 +14,17 @@
       "dependsOn": ["Compile English translations"]
     },
     {
+      "label": "[Zukun] Run Test Camera REST API",
+      "type": "shell",
+      "command": "${command:python.interpreterPath} config/custom_components/zukun/test_api.py",
+      "group": "test",
+      "presentation": {
+        "reveal": "always",
+        "panel": "new"
+      },
+      "problemMatcher": []
+    },
+    {
       "label": "Pytest",
       "type": "shell",
       "command": "${command:python.interpreterPath} -m pytest --timeout=10 tests",
