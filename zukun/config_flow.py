@@ -397,6 +397,7 @@ class GenericIPCamConfigFlow(ConfigFlow, domain=DOMAIN):
         errors = {}
         hass = self.hass
         if user_input:
+            _LOGGER.debug("[CONFIG_FLOW] Validating user_input: %s", user_input)
             # Secondary validation because serialised vol can't seem to handle this complexity:
             if not user_input.get(CONF_STILL_IMAGE_URL) and not user_input.get(
                 CONF_STREAM_SOURCE
@@ -411,6 +412,7 @@ class GenericIPCamConfigFlow(ConfigFlow, domain=DOMAIN):
                 except InvalidStreamException as err:
                     errors[CONF_STREAM_SOURCE] = str(err)
                     self.preview_stream = None
+                _LOGGER.debug("[CONFIG_FLOW] Validation errors: %s", errors)
                 if not errors:
                     user_input[CONF_CONTENT_TYPE] = still_format
                     still_url = user_input.get(CONF_STILL_IMAGE_URL)
@@ -427,9 +429,12 @@ class GenericIPCamConfigFlow(ConfigFlow, domain=DOMAIN):
             user_input = self.user_input
         else:
             user_input = DEFAULT_DATA.copy()
+        _LOGGER.debug("[CONFIG_FLOW] async_show_form: %s", user_input)
+        schema = build_schema(user_input)
+        _LOGGER.debug("[CONFIG_FLOW] async_show_form schema: %s", schema)
         return self.async_show_form(
             step_id="user",
-            data_schema=build_schema(user_input),
+            data_schema=schema,
             errors=errors,
         )
 
@@ -480,7 +485,7 @@ class GenericOptionsFlowHandler(OptionsFlow):
         _LOGGER.debug("[OPTION_FLOW] Starting user step with user_input: %s", user_input)
         errors: dict[str, str] = {}
         hass = self.hass
-
+        _LOGGER.debug("[OPTION_FLOW] Current config entry options: %s", self.config_entry.options)
         if user_input:
             # Secondary validation because serialised vol can't seem to handle this complexity:
             if not user_input.get(CONF_STILL_IMAGE_URL) and not user_input.get(
@@ -511,13 +516,16 @@ class GenericOptionsFlowHandler(OptionsFlow):
                     return await self.async_step_user_confirm()
         elif self.user_input:
             user_input = self.user_input
-        return self.async_show_form(
-            step_id="init",
-            data_schema=build_schema(
+        schema = build_schema(
                 user_input or self.config_entry.options,
                 True,
                 self.show_advanced_options,
-            ),
+            )
+        _LOGGER.debug("[OPTION_FLOW] async_show_form user_input: %s", user_input)
+        _LOGGER.debug("[OPTION_FLOW] async_show_form schema: %s", schema)
+        return self.async_show_form(
+            step_id="init",
+            data_schema=schema,
             errors=errors,
         )
 
